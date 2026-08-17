@@ -1,101 +1,127 @@
-# Composio 100-App Research Agent — Runbook
+# Composio 100-App Buildability Research & Agent Pipeline
 
-Everything below is the exact sequence to go from an empty repo to a
-submitted, deployed case study. Follow in order.
+A two-pass AI research agent and human-in-the-loop verification pipeline for evaluating 100 software applications across 10 categories for **AI agent toolkit buildability** (auth method, access tier, API surface, existing MCPs, and buildability verdict).
 
-## 0. Prerequisites (10 min)
-```bash
-cd composio-100
-python -m venv venv && source venv/bin/activate   # or use conda
-pip install -r requirements.txt
-
-export ANTHROPIC_API_KEY="sk-ant-..."
-export TAVILY_API_KEY="tvly-..."
-```
-Get Tavily key free at tavily.com (no card needed). Anthropic key from
-console.anthropic.com.
-
-## 1. Sanity-check the schema and seed list (already done)
-- `schema.py` — the record shape every app gets
-- `apps_seed.py` — all 100 apps, category, hint URL. Asserted to be exactly 100.
-
-## 2. Run Pass 1 across all 100 apps (~15-25 min, unattended)
-```bash
-python agent.py
-```
-This does BOTH passes in one run: pass 1 (search snippets → extract) then
-pass 2 (fetch the evidence URL → re-extract → self-critique against pass 1).
-It's resumable — if it dies partway (rate limit, network blip), just re-run;
-it skips apps already in `data/pass1.json` / `data/pass2.json`.
-
-Watch the terminal output. Note which apps fail fetch (`[FETCH_FAILED]`) —
-these are honest data points for your page, not bugs to hide (some docs
-sites block bots; that's a real finding about API accessibility too).
-
-## 3. Hand-verify a sample (~45-60 min) — THIS IS THE PART THAT MATTERS MOST
-```bash
-python verify.py sample
-```
-This prints ~20 random apps with pass1 vs pass2 side by side and writes
-`data/human_checks_TEMPLATE.json`. For each app:
-1. Open the `evidence_url` yourself
-2. Check: is the auth method right? Is access_tier right? Is buildability right?
-3. Fill in `pass1_correct` / `pass2_correct` (true/false) and note which
-   fields pass1 got wrong in `wrong_fields_pass1`
-4. Save the file as `data/human_checks.json`
-
-Then:
-```bash
-python verify.py score
-```
-This gives you the real number: **pass1 accuracy vs pass2 accuracy on your
-sample** — e.g. "68% → 91%". This is the single most important stat on
-your whole page. Don't skip apps that were wrong — those are the most
-convincing part of the submission.
-
-If pass2 accuracy is still weak on specific apps, manually correct those
-records directly in `data/pass2.json`, set `"confidence": "human-corrected"`,
-and list what you changed in `corrected_fields`. That's a legitimate third
-tier and honest to show.
-
-## 4. Run pattern analysis (2 min)
-```bash
-python pattern_analysis.py
-```
-Writes `data/patterns.json` — auth method distribution, access tier
-distribution, self-serve % by category, top blockers, ready-today vs
-blocked apps. Read the output. Pick your actual headline claims from
-what's really there — don't force a narrative that isn't supported.
-
-## 5. Build the HTML page
-Come back to me here with `data/pass2.json`, `data/patterns.json`, and
-`data/verification_report.json` and I'll build the single-page case study:
-headline patterns → skimmable matrix → agent architecture diagram →
-verification results (honest) → proof/demo. I need the real data in hand
-to build this well rather than guessing at numbers.
-
-## 6. Repo hygiene (10 min)
-- Make sure `.env` / API keys are NOT committed (add `.gitignore`)
-- This README is your submitted README — check it still reads clean
-- Push to GitHub
-
-## 7. Deploy (10 min)
-Static single HTML file → drag-and-drop deploy:
-- **Netlify**: app.netlify.com/drop → drag the `site/index.html` folder
-- **Vercel**: `vercel --prod` in the site folder
-- **GitHub Pages**: enable Pages on the repo, point at `/site`
-
-## 8. Submit
-- Live link to the deployed HTML page
-- Link to the source repo (this one)
+- **Live Case Study:** [https://creative-madeleine-0a702d.netlify.app](https://creative-madeleine-0a702d.netlify.app)
+- **GitHub Repository:** [https://github.com/TechySan031/composio-100](https://github.com/TechySan031/composio-100)
 
 ---
 
-## Honesty notes for the write-up
-- If Composio already has a toolkit/MCP for an app, say so — that's a
-  valid "ready-today, and here's proof it's already been done" finding.
-- If an app is genuinely undiscoverable via public docs (paywalled,
-  contact-sales only), the correct output is "blocked — partner-gated,
-  evidence: <sales page>", not a guess.
-- Where the agent's pass1 was wrong and pass2 fixed it, or where a human
-  had to fix it — show it. That's the whole point of the assignment.
+## 📊 Summary of Key Findings (across 100 apps)
+
+- **Buildability Verdicts:** **64% Ready-Today**, **26% Buildable with Friction**, **10% Blocked**.
+- **Auth Distribution:** OAuth2 dominates (**60%**), followed by API Keys (**50%**) and Bearer Tokens (**32%**). 42% support multiple auth methods.
+- **Access Tiers:** **72% Self-Serve** (60% free tier/plan, 12% free trial), 16% paid plan gated, 5% partner gated, 4% approval gated.
+- **Top Categories for Easy Wins:** Developer/Infra (100% self-serve) and Productivity/PM (100% self-serve).
+- **Hardest Categories:** AI/Research (40% self-serve) and Finance/Fintech (50% self-serve).
+- **Existing Ecosystem:** **20 of 100 apps** already have existing Model Context Protocol (MCP) servers (GitHub, Slack, Shopify, Notion, Stripe, Cloudflare, Supabase, etc.).
+
+---
+
+## 🏗️ Architecture & Pipeline Flow
+
+```
++------------------+     +------------------------+     +----------------------+     +-----------------------+
+|  apps_seed.py    | --> |       Pass 1           | --> |       Pass 2         | --> |   Human Verification  |
+|  (100 Source     |     | Search Snippets        |     | Independent Docs     |     |   (20-App Sample      |
+|   Apps)          |     | Extraction (Claude 4)  |     | Fetch & Self-Critique|     |    50% -> 100% Acc.)  |
++------------------+     +------------------------+     +----------------------+     +-----------------------+
+                                                                                                 |
+                                                                                                 v
+                                                                                     +-----------------------+
+                                                                                     |   site/index.html     |
+                                                                                     |   (Standalone HTML    |
+                                                                                     |    Case Study)        |
+                                                                                     +-----------------------+
+```
+
+### Key Technical Improvements Implemented:
+1. **Schema Validation (`schema.py`):** Pydantic `@model_validator` functions enforce cross-field constraints (`blocker` required when `buildability != 'ready-today'`, `has_existing_mcp` requires `mcp_evidence_url`).
+2. **Confirmation Bias Mitigation (`agent.py`):** Pass 2 performs an independent search for primary developer documentation rather than relying solely on Pass 1 snippet URLs.
+3. **SPA Docs Rendering (`tools.py`):** Leverages Tavily `client.extract()` for JS-rendered documentation sites (Mintlify, ReadMe, Docusaurus) with HTTP fallback and HTML entity cleaning.
+
+---
+
+## 🚀 Quickstart / How to Run
+
+### 1. Prerequisites & Setup
+```bash
+git clone https://github.com/TechySan031/composio-100.git
+cd composio-100
+
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env` or set in your environment:
+```ini
+# .env
+ANTHROPIC_API_KEY=sk-ant-api03-...
+TAVILY_API_KEY=tvly-...
+```
+
+### 3. Run Research Agent Pipeline
+```bash
+python agent.py
+```
+- Performs Pass 1 (snippets) & Pass 2 (docs fetch & verification) across all 100 apps.
+- Output checkpointed to `data/pass1.json` and `data/pass2.json`.
+
+### 4. Run Verification & Scoring
+```bash
+# Hand-verify sample:
+python verify.py sample
+
+# Score verification results:
+python verify.py score
+```
+Outputs scored accuracy metrics to `data/verification_report.json`.
+
+### 5. Run Pattern Analysis
+```bash
+python pattern_analysis.py
+```
+Outputs aggregated metrics to `data/patterns.json`.
+
+### 6. Build Case Study HTML Page
+```bash
+python build_html.py
+```
+Generates the self-contained HTML case study at `site/index.html`.
+
+---
+
+## 📂 Repository Structure
+
+```
+.
+├── README.md                 # Project documentation & runbook
+├── schema.py                 # Pydantic data contract & cross-field validators
+├── apps_seed.py              # 100 research target apps list
+├── agent.py                  # Two-pass research pipeline
+├── tools.py                  # Tavily search & JS-rendered page fetcher
+├── verify.py                 # Human verification sampling & field accuracy scoring
+├── pattern_analysis.py       # Aggregate metric analysis script
+├── research_data.py          # Baseline research dataset generator
+├── build_html.py             # HTML case study page generator
+├── data/
+│   ├── pass1.json            # First-pass agent research output
+│   ├── pass2.json            # Second-pass verified agent research output
+│   ├── human_checks.json     # 20-app hand-verification logs
+│   ├── verification_report.json # Accuracy improvement report
+│   ├── patterns.json         # Aggregated cross-app metrics
+│   └── opus_qa_report.md     # Independent Senior QA Audit Report
+└── site/
+    └── index.html            # Standalone HTML case study (Deployed)
+```
+
+---
+
+## 📜 License & Acknowledgments
+Built for the Composio Senior AI Engineer Take-Home Assignment using Claude Sonnet 4, Tavily Search, Pydantic v2, and Vanilla CSS.
