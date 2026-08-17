@@ -20,20 +20,30 @@ A two-pass AI research agent and human-in-the-loop verification pipeline for eva
 
 ## 🏗️ Architecture & Pipeline Flow
 
+```mermaid
+graph TD
+    A["apps_seed.py<br/>(100 Target Apps)"] --> B["Pass 1: Snippet Extraction<br/>(Claude 4 + Tavily Search)"]
+    B --> C[("data/pass1.json")]
+    C --> D["Pass 2: Docs Fetch & Verification<br/>(Independent Search + Tavily Extract)"]
+    D --> E[("data/pass2.json")]
+    
+    E --> F["Human Verification Loop<br/>(20-App Sample: verify.py)"]
+    F --> G[("data/verification_report.json")]
+    
+    E --> H["Pattern Analysis<br/>(pattern_analysis.py)"]
+    H --> I[("data/patterns.json")]
+    
+    E & G & I --> J["HTML Case Study Generator<br/>(build_html.py)"]
+    J --> K["site/index.html<br/>(Deployed Case Study)"]
+
+    style A fill:#1a1a2e,stroke:#6366f1,stroke-width:2px,color:#fff
+    style B fill:#1a1a2e,stroke:#6366f1,stroke-width:2px,color:#fff
+    style D fill:#1a1a2e,stroke:#6366f1,stroke-width:2px,color:#fff
+    style F fill:#1a1a2e,stroke:#eab308,stroke-width:2px,color:#fff
+    style J fill:#1a1a2e,stroke:#22c55e,stroke-width:2px,color:#fff
+    style K fill:#22c55e,stroke:#22c55e,stroke-width:2px,color:#000
 ```
-+------------------+     +------------------------+     +----------------------+     +-----------------------+
-|  apps_seed.py    | --> |       Pass 1           | --> |       Pass 2         | --> |   Human Verification  |
-|  (100 Source     |     | Search Snippets        |     | Independent Docs     |     |   (20-App Sample      |
-|   Apps)          |     | Extraction (Claude 4)  |     | Fetch & Self-Critique|     |    50% -> 100% Acc.)  |
-+------------------+     +------------------------+     +----------------------+     +-----------------------+
-                                                                                                 |
-                                                                                                 v
-                                                                                     +-----------------------+
-                                                                                     |   site/index.html     |
-                                                                                     |   (Standalone HTML    |
-                                                                                     |    Case Study)        |
-                                                                                     +-----------------------+
-```
+
 
 ### Key Technical Improvements Implemented:
 1. **Schema Validation (`schema.py`):** Pydantic `@model_validator` functions enforce cross-field constraints (`blocker` required when `buildability != 'ready-today'`, `has_existing_mcp` requires `mcp_evidence_url`).
