@@ -116,7 +116,7 @@ Generates the self-contained HTML case study at `site/index.html`.
 │   ├── human_checks.json     # 20-app hand-verification logs
 │   ├── verification_report.json # Accuracy improvement report
 │   ├── patterns.json         # Aggregated cross-app metrics
-│   └── opus_qa_report.md     # Independent Senior QA Audit Report
+│   └── opus_qa_report.md     # Independent QA Audit Report
 └── site/
     └── index.html            # Standalone HTML case study (Deployed)
 ```
@@ -124,4 +124,4 @@ Generates the self-contained HTML case study at `site/index.html`.
 ---
 
 ## 📜 License & Acknowledgments
-Built for the Composio Senior AI Engineer Take-Home Assignment using Claude Sonnet 4, Tavily Search, Pydantic v2, and Vanilla CSS.
+Built for the Composio Product Intern Technical Assessment using Claude Sonnet 4, Tavily Search, Pydantic v2, and Vanilla CSS.
